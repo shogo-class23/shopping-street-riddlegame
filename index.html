@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商店街謎解きゲーム</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .panel {
+            border: 2px solid #00ff00;
+            padding: 15px;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+
+        .panel-title {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 5px;
+            font-weight: bold;
+        }
+
+        /* Top Left: Map */
+        #map-panel {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        .map-display {
+            flex-grow: 1;
+            background-color: #111;
+            border: 1px dashed #00ff00;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto;
+            gap: 5px;
+            overflow-y: auto;
+        }
+        .map-node {
+            border: 1px solid #005500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            text-align: center;
+            background: rgba(0, 255, 0, 0.05);
+            padding: 2px;
+        }
+        .map-node.active {
+            background-color: #00ff00;
+            color: #000;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        .map-label {
+            grid-column: 1 / span 3;
+            font-size: 0.7em;
+            color: #00aa00;
+            border: none;
+            background: none;
+            justify-content: flex-start;
+            margin-top: 5px;
+        }
+
+        /* Top Right: Monitor */
+        #monitor-panel {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        .monitor-display {
+            flex-grow: 1;
+            background-color: #000;
+            border: 1px solid #00ff00;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+        .monitor-display.off {
+            background-color: #050505;
+        }
+        .monitor-display.off * {
+            display: none !important;
+        }
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 255, 0, 0.1);
+            position: absolute;
+            top: 0;
+            animation: scan 4s linear infinite;
+            z-index: 2;
+        }
+        @keyframes scan {
+            from { top: 0; }
+            to { top: 100%; }
+        }
+        .monitor-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 1.5em;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Bottom Left: Memo */
+        #memo-panel {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        textarea {
+            flex-grow: 1;
+            background-color: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            resize: none;
+            font-family: inherit;
+            outline: none;
+        }
+
+        /* Bottom Right: Controls */
+        #controls-panel {
+            grid-column: 2;
+            grid-row: 2;
+        }
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-grow: 1;
+        }
+        .power-row {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn-power {
+            background-color: #440000;
+            color: #ff0000;
+            border: 2px solid #ff0000;
+            padding: 5px 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-power.on {
+            background-color: #ff0000;
+            color: #000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+        .dpad-section {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            width: 120px;
+        }
+        .channel-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .btn {
+            background-color: #004400;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+        .btn:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-ch {
+            font-size: 0.7em;
+            padding: 4px 0;
+        }
+        .btn-ch.active {
+            background-color: #00ff00;
+            color: #000;
+        }
+        .empty {
+            visibility: hidden;
+        }
+
+        .status-bar {
+            margin-top: 10px;
+            font-size: 0.8em;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- マップ (左上) -->
+        <div id="map-panel" class="panel">
+            <div class="panel-title">MAP [商店街全域]</div>
+            <div class="map-display" id="map-display">
+                <div class="map-label">■ 通り</div>
+                <div class="map-node" id="node-0">商店街入口</div>
+                <div class="map-node" id="node-1">中央通り</div>
+                <div class="map-node" id="node-2">事務所前</div>
+                
+                <div class="map-label">■ 北側エリア</div>
+                <div class="map-node" id="node-3">八百屋</div>
+                <div class="map-node" id="node-4">魚屋</div>
+                <div class="map-node" id="node-5">肉屋</div>
+                <div class="map-node" id="node-6">パン屋</div>
+                <div class="map-node" id="node-7">花屋</div>
+                <div class="map-node" id="node-8">銀行</div>
+                
+                <div class="map-label">■ 南側エリア</div>
+                <div class="map-node" id="node-9">カメラ屋</div>
+                <div class="map-node" id="node-10">ジュエリー</div>
+                <div class="map-node" id="node-11">カバン屋</div>
+                <div class="map-node" id="node-12">本屋</div>
+                <div class="map-node" id="node-13">買取屋</div>
+                <div class="map-node" id="node-14">喫茶店</div>
+                <div class="map-node" id="node-15">旅行代理店</div>
+                <div class="map-node" id="node-16">事務所</div>
+            </div>
+        </div>
+
+        <!-- モニタ (右上) -->
+        <div id="monitor-panel" class="panel">
+            <div class="panel-title">LIVE MONITOR [<span id="cam-id">CAM_--</span>]</div>
+            <div class="monitor-display off" id="monitor-screen">
+                <div class="scanline"></div>
+                <div class="monitor-content" id="monitor-text">
+                    NO SIGNAL
+                </div>
+            </div>
+            <div class="status-bar">
+                <span id="rec-indicator" style="visibility: hidden;">REC ● <span id="timer">00:00:00</span></span>
+                <span id="ch-indicator">CH: --</span>
+            </div>
+        </div>
+
+        <!-- メモ (左下) -->
+        <div id="memo-panel" class="panel">
+            <div class="panel-title">MEMO</div>
+            <textarea placeholder="手がかりをここに入力してください..."></textarea>
+        </div>
+
+        <!-- スイッチ (右下) -->
+        <div id="controls-panel" class="panel">
+            <div class="panel-title">SYSTEM CONTROL</div>
+            <div class="controls-container">
+                <div class="power-row">
+                    <button id="power-btn" class="btn-power" onclick="togglePower()">POWER</button>
+                </div>
+                
+                <div class="dpad-section">
+                    <div class="controls-grid">
+                        <div class="empty"></div>
+                        <button class="btn" onclick="moveCamera('UP')">▲</button>
+                        <div class="empty"></div>
+                        <button class="btn" onclick="moveCamera('LEFT')">◀</button>
+                        <button class="btn" onclick="moveCamera('RESET')">●</button>
+                        <button class="btn" onclick="moveCamera('RIGHT')">▶</button>
+                        <div class="empty"></div>
+                        <button class="btn" onclick="moveCamera('DOWN')">▼</button>
+                        <div class="empty"></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <button class="btn" style="padding: 5px 10px;" onclick="moveCamera('ZOOM_IN')">Z+</button>
+                        <button class="btn" style="padding: 5px 10px;" onclick="moveCamera('ZOOM_OUT')">Z-</button>
+                    </div>
+                </div>
+
+                <div class="channel-grid" id="channel-buttons">
+                    <!-- JSで生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const channels = [
+            "商店街入口", "中央通り", "事務所前",
+            "八百屋", "魚屋", "肉屋", "パン屋", "花屋", "銀行",
+            "カメラ屋", "ジュエリー", "カバン屋", "本屋", "買取屋", "喫茶店", "旅行代理店", "事務所"
+        ];
+        
+        let isPowerOn = false;
+        let currentChannel = 0;
+        let timerInterval;
+        let startTime;
+
+        function init() {
+            const grid = document.getElementById('channel-buttons');
+            channels.forEach((name, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-ch';
+                btn.innerText = `CH${index.toString().padStart(2, '0')}`;
+                btn.onclick = () => setChannel(index);
+                btn.id = `ch-btn-${index}`;
+                grid.appendChild(btn);
+            });
+        }
+
+        function togglePower() {
+            isPowerOn = !isPowerOn;
+            const screen = document.getElementById('monitor-screen');
+            const btn = document.getElementById('power-btn');
+            const rec = document.getElementById('rec-indicator');
+            
+            if (isPowerOn) {
+                screen.classList.remove('off');
+                btn.classList.add('on');
+                rec.style.visibility = 'visible';
+                startTimer();
+                setChannel(currentChannel);
+            } else {
+                screen.classList.add('off');
+                btn.classList.remove('on');
+                rec.style.visibility = 'hidden';
+                stopTimer();
+                document.getElementById('cam-id').innerText = 'CAM_--';
+                document.getElementById('ch-indicator').innerText = 'CH: --';
+            }
+        }
+
+        function setChannel(index) {
+            if (!isPowerOn) return;
+            
+            currentChannel = index;
+            const monitorText = document.getElementById('monitor-text');
+            const camId = document.getElementById('cam-id');
+            const chInd = document.getElementById('ch-indicator');
+            
+            // UI更新
+            document.querySelectorAll('.btn-ch').forEach(b => b.classList.remove('active'));
+            document.getElementById(`ch-btn-${index}`).classList.add('active');
+            
+            document.querySelectorAll('.map-node').forEach(n => n.classList.remove('active'));
+            document.getElementById(`node-${index}`).classList.add('active');
+
+            camId.innerText = `CAM_${index.toString().padStart(2, '0')}`;
+            chInd.innerText = `CH: ${index.toString().padStart(2, '0')}`;
+            
+            monitorText.innerHTML = `<div style="text-align:center">
+                <span style="font-size: 0.5em; opacity: 0.7; letter-spacing: 2px;">LIVE FEED</span><br>
+                <span style="text-shadow: 0 0 10px #00ff00;">${channels[index]}</span>
+            </div>`;
+        }
+
+        function moveCamera(direction) {
+            if (!isPowerOn) return;
+            const monitorText = document.getElementById('monitor-text');
+            const originalHTML = monitorText.innerHTML;
+            
+            monitorText.innerHTML = `<div style="color: #ffff00; font-size: 0.7em;">CMD: ${direction} EXECUTING...</div>`;
+            
+            setTimeout(() => {
+                if (isPowerOn) monitorText.innerHTML = originalHTML;
+            }, 600);
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const diff = Math.floor((Date.now() - startTime) / 1000);
+                const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+                const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+                const s = (diff % 60).toString().padStart(2, '0');
+                document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timer').innerText = '00:00:00';
+        }
+
+        init();
+    </script>
+</body>
+</html>
