@@ -3,416 +3,400 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商店街謎解きゲーム</title>
+    <title>商店街謎解きゲーム - THE MONITOR</title>
     <style>
+        :root {
+            --neon-green: #00ff00;
+            --dark-bg: #1a1a1a;
+            --panel-bg: #000;
+        }
         body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
+            margin: 0; padding: 0; height: 100%;
             font-family: 'Courier New', Courier, monospace;
-            background-color: #1a1a1a;
-            color: #00ff00;
+            background-color: var(--dark-bg);
+            color: var(--neon-green);
             overflow: hidden;
         }
 
-        .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            height: 100vh;
-            gap: 10px;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        .panel {
-            border: 2px solid #00ff00;
-            padding: 15px;
-            background-color: #000;
-            display: flex;
+        /* Home Screen & Story Overlay */
+        #game-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            display: flex; align-items: center; justify-content: center;
             flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            text-align: center;
+            padding: 20px;
+        }
+        .overlay-content {
+            max-width: 600px;
+            border: 2px solid var(--neon-green);
+            padding: 40px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        .title-glitch {
+            font-size: 3em; font-weight: bold; margin-bottom: 20px;
+            text-shadow: 2px 2px #ff0000, -2px -2px #0000ff;
+        }
+        .btn-large {
+            background: var(--neon-green); color: #000;
+            border: none; padding: 15px 40px; font-size: 1.5em;
+            cursor: pointer; font-family: inherit; font-weight: bold;
+            margin-top: 20px; transition: 0.3s;
+        }
+        .btn-large:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--neon-green); }
+        
+        .story-text {
+            text-align: left; line-height: 1.6; margin-bottom: 20px;
+            font-size: 1.1em; white-space: pre-wrap;
         }
 
+        /* Main Game Layout */
+        .container {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+            height: 100vh; gap: 10px; padding: 10px; box-sizing: border-box;
+        }
+        .panel {
+            border: 2px solid var(--neon-green); padding: 15px;
+            background-color: var(--panel-bg); display: flex; flex-direction: column;
+            overflow: hidden; box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
         .panel-title {
-            font-size: 1.2em;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 5px;
-            font-weight: bold;
+            font-size: 1.2em; margin-bottom: 10px; border-bottom: 1px solid var(--neon-green);
+            padding-bottom: 5px; font-weight: bold;
         }
 
-        /* Top Left: Map */
-        #map-panel {
-            grid-column: 1;
-            grid-row: 1;
-        }
+        /* Map Panel */
+        #map-panel { grid-column: 1; grid-row: 1; }
         .map-display {
-            flex-grow: 1;
-            background-color: #111;
-            border: 1px dashed #00ff00;
-            padding: 10px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: auto;
-            gap: 5px;
+            flex-grow: 1; background-color: #111; border: 1px dashed var(--neon-green);
+            padding: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
             overflow-y: auto;
         }
         .map-node {
-            border: 1px solid #005500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8em;
-            text-align: center;
-            background: rgba(0, 255, 0, 0.05);
-            padding: 2px;
+            border: 1px solid #005500; display: flex; align-items: center; justify-content: center;
+            font-size: 0.8em; text-align: center; background: rgba(0, 255, 0, 0.05); padding: 4px;
         }
-        .map-node.active {
-            background-color: #00ff00;
-            color: #000;
-            box-shadow: 0 0 5px #00ff00;
-        }
-        .map-label {
-            grid-column: 1 / span 3;
-            font-size: 0.7em;
-            color: #00aa00;
-            border: none;
-            background: none;
-            justify-content: flex-start;
-            margin-top: 5px;
-        }
+        .map-node.active { background-color: var(--neon-green); color: #000; }
+        .map-node.target { border: 2px solid yellow; color: yellow; }
+        .map-label { grid-column: 1 / span 3; font-size: 0.7em; color: #00aa00; margin-top: 8px; }
 
-        /* Top Right: Monitor */
-        #monitor-panel {
-            grid-column: 2;
-            grid-row: 1;
-        }
+        /* Monitor Panel */
+        #monitor-panel { grid-column: 2; grid-row: 1; }
         .monitor-display {
-            flex-grow: 1;
-            background-color: #000;
-            border: 1px solid #00ff00;
-            position: relative;
-            overflow: hidden;
-            transition: background-color 0.3s;
+            flex-grow: 1; background-color: #000; border: 1px solid var(--neon-green);
+            position: relative; overflow: hidden;
         }
-        .monitor-display.off {
-            background-color: #050505;
-        }
-        .monitor-display.off * {
-            display: none !important;
-        }
+        .monitor-display.off { background-color: #050505; }
+        .monitor-display.off * { display: none !important; }
         .scanline {
-            width: 100%;
-            height: 2px;
-            background: rgba(0, 255, 0, 0.1);
-            position: absolute;
-            top: 0;
-            animation: scan 4s linear infinite;
-            z-index: 2;
+            width: 100%; height: 2px; background: rgba(0, 255, 0, 0.1);
+            position: absolute; top: 0; animation: scan 4s linear infinite; z-index: 2;
         }
-        @keyframes scan {
-            from { top: 0; }
-            to { top: 100%; }
-        }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
         .monitor-content {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            font-size: 1.5em;
-            position: relative;
-            z-index: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; padding: 20px; text-align: center; z-index: 1;
         }
+        .action-btn {
+            background: #004400; color: var(--neon-green); border: 1px solid var(--neon-green);
+            padding: 8px 15px; margin: 5px; cursor: pointer; font-family: inherit;
+        }
+        .action-btn:hover { background: var(--neon-green); color: #000; }
 
-        /* Bottom Left: Memo */
-        #memo-panel {
-            grid-column: 1;
-            grid-row: 2;
-        }
+        /* Memo & Inventory */
+        #memo-panel { grid-column: 1; grid-row: 2; }
+        .memo-container { display: flex; flex-direction: column; height: 100%; }
         textarea {
-            flex-grow: 1;
-            background-color: #000;
-            color: #00ff00;
-            border: 1px solid #00ff00;
-            padding: 10px;
-            resize: none;
-            font-family: inherit;
-            outline: none;
+            flex-grow: 1; background: #000; color: var(--neon-green);
+            border: 1px solid var(--neon-green); padding: 10px; resize: none; font-family: inherit; outline: none;
+        }
+        .inventory {
+            margin-top: 10px; padding: 5px; border-top: 1px solid #004400; font-size: 0.8em;
         }
 
-        /* Bottom Right: Controls */
-        #controls-panel {
-            grid-column: 2;
-            grid-row: 2;
-        }
-        .controls-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex-grow: 1;
-        }
-        .power-row {
-            display: flex;
-            justify-content: flex-end;
-        }
-        .btn-power {
-            background-color: #440000;
-            color: #ff0000;
-            border: 2px solid #ff0000;
-            padding: 5px 15px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn-power.on {
-            background-color: #ff0000;
-            color: #000;
-            box-shadow: 0 0 10px #ff0000;
-        }
-        .dpad-section {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            justify-content: center;
-        }
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
-            width: 120px;
-        }
-        .channel-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 5px;
-            margin-top: 5px;
-        }
-        .btn {
-            background-color: #004400;
-            color: #00ff00;
-            border: 1px solid #00ff00;
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8em;
-        }
-        .btn:hover {
-            background-color: #00ff00;
-            color: #000;
-        }
-        .btn:active {
-            transform: scale(0.95);
-        }
-        .btn-ch {
-            font-size: 0.7em;
-            padding: 4px 0;
-        }
-        .btn-ch.active {
-            background-color: #00ff00;
-            color: #000;
-        }
-        .empty {
-            visibility: hidden;
-        }
+        /* Controls */
+        #controls-panel { grid-column: 2; grid-row: 2; }
+        .controls-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
+        .btn-ch { font-size: 0.7em; padding: 5px 0; background: #002200; color: var(--neon-green); border: 1px solid var(--neon-green); cursor: pointer; }
+        .btn-ch.active { background: var(--neon-green); color: #000; }
+        .power-btn { background: #440000; color: #ff0000; border: 1px solid #ff0000; font-weight: bold; cursor: pointer; padding: 5px 10px; margin-left: auto;}
+        .power-btn.on { background: #ff0000; color: #000; }
 
-        .status-bar {
-            margin-top: 10px;
-            font-size: 0.8em;
-            display: flex;
-            justify-content: space-between;
-        }
+        .status-bar { display: flex; justify-content: space-between; font-size: 0.8em; margin-top: 5px; }
     </style>
 </head>
 <body>
 
+    <!-- Overlays -->
+    <div id="game-overlay">
+        <div class="overlay-content" id="overlay-inner">
+            <div class="title-glitch">商店街監視システム</div>
+            <p>～失われた記憶と商店街の謎～</p>
+            <button class="btn-large" onclick="showStory()">ゲームを開始する</button>
+        </div>
+    </div>
+
     <div class="container">
-        <!-- マップ (左上) -->
+        <!-- マップ -->
         <div id="map-panel" class="panel">
-            <div class="panel-title">MAP [商店街全域]</div>
+            <div class="panel-title">MAP [LOCATION]</div>
             <div class="map-display" id="map-display">
-                <div class="map-label">■ 通り</div>
-                <div class="map-node" id="node-0">商店街入口</div>
-                <div class="map-node" id="node-1">中央通り</div>
-                <div class="map-node" id="node-2">事務所前</div>
+                <div class="map-label">■ 基本施設</div>
+                <div class="map-node" id="node-0">受付</div>
+                <div class="map-node" id="node-1">銀行</div>
+                <div class="map-node" id="node-2">通り</div>
                 
-                <div class="map-label">■ 北側エリア</div>
+                <div class="map-label">■ 北側</div>
                 <div class="map-node" id="node-3">八百屋</div>
                 <div class="map-node" id="node-4">魚屋</div>
                 <div class="map-node" id="node-5">肉屋</div>
                 <div class="map-node" id="node-6">パン屋</div>
                 <div class="map-node" id="node-7">花屋</div>
-                <div class="map-node" id="node-8">銀行</div>
                 
-                <div class="map-label">■ 南側エリア</div>
-                <div class="map-node" id="node-9">カメラ屋</div>
-                <div class="map-node" id="node-10">ジュエリー</div>
-                <div class="map-node" id="node-11">カバン屋</div>
-                <div class="map-node" id="node-12">本屋</div>
-                <div class="map-node" id="node-13">買取屋</div>
-                <div class="map-node" id="node-14">喫茶店</div>
-                <div class="map-node" id="node-15">旅行代理店</div>
-                <div class="map-node" id="node-16">事務所</div>
+                <div class="map-label">■ 南側</div>
+                <div class="map-node" id="node-8">カメラ屋</div>
+                <div class="map-node" id="node-9">ジュエリー</div>
+                <div class="map-node" id="node-10">カバン屋</div>
+                <div class="map-node" id="node-11">本屋</div>
+                <div class="map-node" id="node-12">買取屋</div>
+                <div class="map-node" id="node-13">喫茶店</div>
+                <div class="map-node" id="node-14">旅行代理店</div>
+                <div class="map-node" id="node-15">事務所</div>
             </div>
         </div>
 
-        <!-- モニタ (右上) -->
+        <!-- モニター -->
         <div id="monitor-panel" class="panel">
             <div class="panel-title">LIVE MONITOR [<span id="cam-id">CAM_--</span>]</div>
             <div class="monitor-display off" id="monitor-screen">
                 <div class="scanline"></div>
                 <div class="monitor-content" id="monitor-text">
-                    NO SIGNAL
+                    SYSTEM OFFLINE
                 </div>
             </div>
             <div class="status-bar">
                 <span id="rec-indicator" style="visibility: hidden;">REC ● <span id="timer">00:00:00</span></span>
+                <span>MONEY: ¥<span id="wallet">0</span></span>
                 <span id="ch-indicator">CH: --</span>
             </div>
         </div>
 
-        <!-- メモ (左下) -->
+        <!-- メモ & インベントリ -->
         <div id="memo-panel" class="panel">
-            <div class="panel-title">MEMO</div>
-            <textarea placeholder="手がかりをここに入力してください..."></textarea>
+            <div class="panel-title">MEMO & INVENTORY</div>
+            <div class="memo-container">
+                <textarea id="memo-area" placeholder="手がかりを記録せよ..."></textarea>
+                <div class="inventory" id="inventory-display">所持品: なし</div>
+            </div>
         </div>
 
-        <!-- スイッチ (右下) -->
+        <!-- システムコントロール -->
         <div id="controls-panel" class="panel">
-            <div class="panel-title">SYSTEM CONTROL</div>
-            <div class="controls-container">
-                <div class="power-row">
-                    <button id="power-btn" class="btn-power" onclick="togglePower()">POWER</button>
-                </div>
-                
-                <div class="dpad-section">
-                    <div class="controls-grid">
-                        <div class="empty"></div>
-                        <button class="btn" onclick="moveCamera('UP')">▲</button>
-                        <div class="empty"></div>
-                        <button class="btn" onclick="moveCamera('LEFT')">◀</button>
-                        <button class="btn" onclick="moveCamera('RESET')">●</button>
-                        <button class="btn" onclick="moveCamera('RIGHT')">▶</button>
-                        <div class="empty"></div>
-                        <button class="btn" onclick="moveCamera('DOWN')">▼</button>
-                        <div class="empty"></div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        <button class="btn" style="padding: 5px 10px;" onclick="moveCamera('ZOOM_IN')">Z+</button>
-                        <button class="btn" style="padding: 5px 10px;" onclick="moveCamera('ZOOM_OUT')">Z-</button>
-                    </div>
-                </div>
-
-                <div class="channel-grid" id="channel-buttons">
-                    <!-- JSで生成 -->
-                </div>
+            <div style="display: flex; align-items: center;">
+                <div class="panel-title" style="flex-grow:1; margin-bottom:0;">SYSTEM CONTROL</div>
+                <button id="pwr-btn" class="power-btn" onclick="togglePower()">POWER</button>
+            </div>
+            <div class="controls-grid" id="channel-btns">
+                <!-- JSで生成 -->
+            </div>
+            <div style="margin-top: 10px; font-size: 0.7em; color: #00aa00;">
+                * チャンネルを選択して移動 / ズーム・方向キーは後ほど実装
             </div>
         </div>
     </div>
 
     <script>
-        const channels = [
-            "商店街入口", "中央通り", "事務所前",
-            "八百屋", "魚屋", "肉屋", "パン屋", "花屋", "銀行",
+        const LOCATIONS = [
+            "受付", "銀行", "メイン通り", 
+            "八百屋", "魚屋", "肉屋", "パン屋", "花屋",
             "カメラ屋", "ジュエリー", "カバン屋", "本屋", "買取屋", "喫茶店", "旅行代理店", "事務所"
         ];
-        
-        let isPowerOn = false;
-        let currentChannel = 0;
-        let timerInterval;
-        let startTime;
 
-        function init() {
-            const grid = document.getElementById('channel-buttons');
-            channels.forEach((name, index) => {
+        let gameState = {
+            power: false,
+            currentLocation: -1,
+            wallet: 0,
+            hasMaterials: false,
+            inventory: [],
+            tickets: 0,
+            difficulty: 'easy',
+            phase: 'start' // start, banking, shopping, finished
+        };
+
+        function showStory() {
+            const inner = document.getElementById('overlay-inner');
+            inner.innerHTML = `
+                <div class="story-text">
+【ストーリー】
+あなたは、この「銀河商店街」にやってきた。
+古びた監視モニターの前に座らされたあなたは、
+受付の男から「ある目的」を果たすよう告げられる。
+
+商店街の謎を解き、必要なものを手に入れ、
+最後には豪華賞品が当たる「福引」に挑戦するのだ。
+
+※スキップ可能
+                </div>
+                <div style="margin-bottom: 20px;">
+                    難易度を選択してください：<br>
+                    <button class="action-btn" onclick="startGame('easy')">初級：とにかく楽しむ</button>
+                    <button class="action-btn" onclick="startGame('hard')">上級：目的の品を持ち帰る</button>
+                </div>
+                <button class="btn-large" style="font-size: 1em; padding: 10px 20px;" onclick="startGame('easy')">ストーリーをスキップ</button>
+            `;
+        }
+
+        function startGame(diff) {
+            gameState.difficulty = diff;
+            document.getElementById('game-overlay').style.display = 'none';
+            initChannels();
+            alert("モニターの電源を入れて、CH00の『受付』へ向かってください。");
+        }
+
+        function initChannels() {
+            const grid = document.getElementById('channel-btns');
+            LOCATIONS.forEach((name, i) => {
                 const btn = document.createElement('button');
-                btn.className = 'btn btn-ch';
-                btn.innerText = `CH${index.toString().padStart(2, '0')}`;
-                btn.onclick = () => setChannel(index);
-                btn.id = `ch-btn-${index}`;
+                btn.className = 'btn-ch';
+                btn.innerText = `CH${i.toString().padStart(2, '0')}`;
+                btn.onclick = () => setLocation(i);
+                btn.id = `ch-btn-${i}`;
                 grid.appendChild(btn);
             });
         }
 
         function togglePower() {
-            isPowerOn = !isPowerOn;
+            gameState.power = !gameState.power;
             const screen = document.getElementById('monitor-screen');
-            const btn = document.getElementById('power-btn');
+            const btn = document.getElementById('pwr-btn');
             const rec = document.getElementById('rec-indicator');
-            
-            if (isPowerOn) {
+            if(gameState.power) {
                 screen.classList.remove('off');
                 btn.classList.add('on');
                 rec.style.visibility = 'visible';
-                startTimer();
-                setChannel(currentChannel);
+                if(gameState.currentLocation === -1) setLocation(0);
             } else {
                 screen.classList.add('off');
                 btn.classList.remove('on');
                 rec.style.visibility = 'hidden';
-                stopTimer();
-                document.getElementById('cam-id').innerText = 'CAM_--';
-                document.getElementById('ch-indicator').innerText = 'CH: --';
             }
         }
 
-        function setChannel(index) {
-            if (!isPowerOn) return;
+        function setLocation(id) {
+            if(!gameState.power) return;
+            gameState.currentLocation = id;
             
-            currentChannel = index;
-            const monitorText = document.getElementById('monitor-text');
-            const camId = document.getElementById('cam-id');
-            const chInd = document.getElementById('ch-indicator');
-            
-            // UI更新
+            // UI Update
             document.querySelectorAll('.btn-ch').forEach(b => b.classList.remove('active'));
-            document.getElementById(`ch-btn-${index}`).classList.add('active');
-            
+            document.getElementById(`ch-btn-${id}`).classList.add('active');
             document.querySelectorAll('.map-node').forEach(n => n.classList.remove('active'));
-            document.getElementById(`node-${index}`).classList.add('active');
-
-            camId.innerText = `CAM_${index.toString().padStart(2, '0')}`;
-            chInd.innerText = `CH: ${index.toString().padStart(2, '0')}`;
+            document.getElementById(`node-${id}`).classList.add('active');
             
-            monitorText.innerHTML = `<div style="text-align:center">
-                <span style="font-size: 0.5em; opacity: 0.7; letter-spacing: 2px;">LIVE FEED</span><br>
-                <span style="text-shadow: 0 0 10px #00ff00;">${channels[index]}</span>
-            </div>`;
+            document.getElementById('cam-id').innerText = `CAM_${id.toString().padStart(2, '0')}`;
+            document.getElementById('ch-indicator').innerText = `CH: ${id.toString().padStart(2, '0')}`;
+
+            renderLocationContent(id);
         }
 
-        function moveCamera(direction) {
-            if (!isPowerOn) return;
-            const monitorText = document.getElementById('monitor-text');
-            const originalHTML = monitorText.innerHTML;
+        function renderLocationContent(id) {
+            const content = document.getElementById('monitor-text');
+            const locName = LOCATIONS[id];
             
-            monitorText.innerHTML = `<div style="color: #ffff00; font-size: 0.7em;">CMD: ${direction} EXECUTING...</div>`;
-            
-            setTimeout(() => {
-                if (isPowerOn) monitorText.innerHTML = originalHTML;
-            }, 600);
+            let html = `<h3>${locName}</h3>`;
+
+            if (id === 0) { // 受付
+                html += `<p>受付係「ようこそ。まずは【銀行】でお金をおろしてきてください。」</p>`;
+                if (!gameState.hasMaterials) {
+                    html += `<button class="action-btn" onclick="getMaterials()">資料と鉛筆を受け取る</button>`;
+                } else if (gameState.phase === 'finished') {
+                    html += `<p>「お疲れ様でした！福引に挑戦しましょう！」</p>
+                             <button class="action-btn" onclick="drawLottery()">福引を引く (${gameState.tickets}回可能)</button>`;
+                } else {
+                    html += `<p>「福引券を持って戻ってきてくださいね。」</p>`;
+                }
+            } else if (id === 1) { // 銀行
+                html += `<p>ATM操作画面</p>
+                         <button class="action-btn" onclick="bankAction('withdraw')">預金引出 (¥10,000)</button>
+                         <button class="action-btn" onclick="bankAction('deposit')">預け入れ</button>
+                         <button class="action-btn" onclick="bankAction('exchange')">外貨両替</button>`;
+            } else if (id >= 3) { // 各店舗
+                if (gameState.wallet < 1000) {
+                    html += `<p>店員「お買い物にはお金が必要ですよ。」</p>`;
+                } else {
+                    html += `<p>店主「いらっしゃい！今日の謎解きおススメ商品はこれだ！」</p>
+                             <div style="border: 1px solid green; padding: 10px; margin: 10px;">
+                                 【謎：朝は4本、昼は2本、夜は3本足の生き物は？】
+                             </div>
+                             <button class="action-btn" onclick="buyItem('${locName}のおススメ')">謎を解いて購入 (¥1,000)</button>`;
+                }
+            } else {
+                html += `<p>特に異常なし。平和な商店街の風景だ。</p>`;
+            }
+
+            content.innerHTML = html;
         }
 
-        function startTimer() {
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const diff = Math.floor((Date.now() - startTime) / 1000);
-                const h = Math.floor(diff / 3600).toString().padStart(2, '0');
-                const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
-                const s = (diff % 60).toString().padStart(2, '0');
-                document.getElementById('timer').innerText = `${h}:${m}:${s}`;
-            }, 1000);
+        // Game Actions
+        window.getMaterials = () => {
+            gameState.hasMaterials = true;
+            gameState.inventory.push("資料と鉛筆");
+            updateInventory();
+            alert("資料と鉛筆を受け取った。福引には『ハズレはお菓子』『当たりは旅行券』があるようだ。");
+            renderLocationContent(0);
+        };
+
+        window.bankAction = (type) => {
+            if(type === 'withdraw') {
+                gameState.wallet += 10000;
+                document.getElementById('wallet').innerText = gameState.wallet;
+                alert("¥10,000を引き出した。これで買い物が始められる！");
+                if(gameState.phase === 'start') gameState.phase = 'banking';
+            } else {
+                alert("現在は『引き出し』のみ可能です。");
+            }
+        };
+
+        window.buyItem = (itemName) => {
+            if(gameState.wallet >= 1000) {
+                gameState.wallet -= 1000;
+                gameState.inventory.push(itemName);
+                gameState.tickets += 1;
+                document.getElementById('wallet').innerText = gameState.wallet;
+                updateInventory();
+                alert(`${itemName}を購入！レシートと福引券をもらった。`);
+                gameState.phase = 'finished';
+            }
+        };
+
+        window.drawLottery = () => {
+            if(gameState.tickets > 0) {
+                gameState.tickets--;
+                const win = Math.random() > 0.8;
+                if(win) {
+                    alert("特賞：豪華ハワイ旅行券！！おめでとうございます！");
+                } else {
+                    alert("残念、ハズレです。うまい棒（コーンポタージュ味）をどうぞ。");
+                }
+                if(gameState.tickets === 0) renderLocationContent(0);
+            }
+        };
+
+        function updateInventory() {
+            document.getElementById('inventory-display').innerText = "所持品: " + gameState.inventory.join(", ");
         }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-            document.getElementById('timer').innerText = '00:00:00';
-        }
-
-        init();
+        // Timer
+        let startTime = Date.now();
+        setInterval(() => {
+            if(!gameState.power) return;
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const h = Math.floor(diff/3600).toString().padStart(2, '0');
+            const m = Math.floor((diff%3600)/60).toString().padStart(2, '0');
+            const s = (diff%60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+        }, 1000);
     </script>
 </body>
 </html>
