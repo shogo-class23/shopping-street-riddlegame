@@ -134,9 +134,13 @@
 
         /* Controls */
         #controls-panel { grid-column: 2; grid-row: 2; }
-        .controls-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 10px; }
-        .btn-ch { font-size: 0.7em; padding: 5px 0; background: #002200; color: var(--neon-green); border: 1px solid var(--neon-green); cursor: pointer; }
-        .btn-ch.active { background: var(--neon-green); color: #000; }
+        .controls-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+        .btn-ch {
+            font-size: 0.7em; padding: 8px 2px; background: #002200; color: var(--neon-green);
+            border: 1px solid var(--neon-green); cursor: pointer;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .btn-ch.active { background: var(--neon-green); color: #000; font-weight: bold; }
         .power-btn { background: #440000; color: #ff0000; border: 1px solid #ff0000; font-weight: bold; cursor: pointer; padding: 5px 10px; margin-left: auto;}
         .power-btn.on { background: #ff0000; color: #000; }
 
@@ -197,7 +201,7 @@
             <div class="tab-bar">
                 <button class="tab-btn active" onclick="switchTab('tab-map')">マップ</button>
                 <button class="tab-btn" onclick="switchTab('tab-flyer')">チラシ</button>
-                <button class="tab-btn" onclick="switchTab('tab-initial')">最初の</button>
+                <button class="tab-btn" onclick="switchTab('tab-initial')">最初の資料</button>
                 <button class="tab-btn" onclick="switchTab('tab-bought')">買ったもの</button>
                 <button class="tab-btn" onclick="switchTab('tab-received')">受け取ったもの</button>
             </div>
@@ -363,12 +367,13 @@
             
             // 初期アイテムセット
             gameState.inventory = ["資料", "鉛筆", "マップ"];
+            gameState.hasMaterials = true; // 最初から持っている扱いにする
             updateInventory();
             
             // 確実に表示させるための遅延実行
             setTimeout(() => {
                 showNotification("資料と鉛筆を手に入れた！");
-                showDialogue("あなたはいくつかの資料をもらい、手元には鉛筆がある。まずは銀行に行って、お金をおろさないと買えないようだ。銀行のチャンネルを押して、引き出しのボタンを押そう。詳細は『最初の』タブを確認してほしい。", "GUIDE");
+                showDialogue("あなたはいくつかの資料をもらい、手元には鉛筆がある。まずは銀行に行って、お金をおろさないと買えないようだ。銀行のチャンネルを押して、引き出しのボタンを押そう。", "GUIDE");
             }, 200);
         }
 
@@ -377,7 +382,8 @@
             LOCATIONS.forEach((name, i) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn-ch';
-                btn.innerText = `CH${i.toString().padStart(2, '0')}`;
+                btn.innerText = name; // 店名を表示
+                btn.title = `CH${i.toString().padStart(2, '0')}: ${name}`;
                 btn.onclick = () => setLocation(i);
                 btn.id = `ch-btn-${i}`;
                 grid.appendChild(btn);
@@ -467,15 +473,19 @@
             renderLocationContent(0);
         };
         window.bankAction = (type) => {
-            if (gameState.phase === 'start' || gameState.wallet === 0) {
+            // 初回、または所持金が足りない時に引き出し可能にする
+            if (type === 'withdraw' && gameState.wallet < 10000) {
                 gameState.wallet += 10000;
                 document.getElementById('wallet').innerText = gameState.wallet;
-                showDialogue("お金を受け取りました。これで好きなお店に行って買い物ができます。", "SYSTEM");
+                showNotification("¥10,000を手に入れた！");
+                showDialogue("お金を受け取りました。POSSESSIONS / MATERIALSの『最初の資料』タブを押しましょう。", "SYSTEM");
                 gameState.phase = 'banking';
-            } else {
-                if(type === 'withdraw') showDialogue("すでに十分な現金を持っています。", "SYSTEM");
-                else if(type === 'deposit') showDialogue("預け入れ可能な現金がありません。", "SYSTEM");
-                else showDialogue("外貨両替の必要はありません。", "SYSTEM");
+            } else if (type === 'withdraw') {
+                showDialogue("すでに十分な現金（¥" + gameState.wallet + "）を持っています。", "SYSTEM");
+            } else if (type === 'deposit') {
+                showDialogue("預け入れ可能な現金がありません。", "SYSTEM");
+            } else if (type === 'exchange') {
+                showDialogue("外貨両替の必要はありません。", "SYSTEM");
             }
         };
 
